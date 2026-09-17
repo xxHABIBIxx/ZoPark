@@ -1,19 +1,5 @@
 # -*- mode: python ; coding: utf-8 -*-
-"""
-Spec PyInstaller de ZoPark — v2, adaptee a la structure du projet :
 
-    <racine>\
-        launcher.py  zopark.spec  warmup.py  build_exe.bat   <- le kit
-        backend\   zopark_api.py, geo.py, requirements.txt,
-                   zopark_melbourne_rf.pkl (optionnel)
-        data\      halifax_bundle.json
-        app\       projet Flutter
-        webapp\    build web copie par build_exe.bat
-        halifax_graph.graphml   (cree par warmup.py)
-
-Mode ONEFILE : un seul dist\ZoPark.exe. Windows extrait ~400 Mo a chaque
-lancement -> 15 a 40 s avant la console. Variante ONEDIR en fin de fichier.
-"""
 
 import os
 
@@ -80,16 +66,3 @@ exe = EXE(
     upx=False,      # UPX + DLL scientifiques = faux positifs antivirus
 )
 
-# ----- Variante ONEDIR (demarrage instantane, dossier au lieu d'un exe) ---
-# Commenter le bloc EXE ci-dessus, decommenter ci-dessous, relancer
-# pyinstaller. Resultat : dist\ZoPark\ (lancer ZoPark.exe dedans).
-#
-# exe = EXE(
-#     pyz,
-#     a.scripts,
-#     name="ZoPark",
-#     exclude_binaries=True,
-#     console=True,
-#     upx=False,
-# )
-# coll = COLLECT(exe, a.binaries, a.datas, name="ZoPark", upx=False)
