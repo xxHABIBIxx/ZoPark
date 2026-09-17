@@ -1,0 +1,28 @@
+{
+  "source": "City of Melbourne \u2014 On-street Car Parking Sensor Data",
+  "ground_truth": true,
+  "split": "temporel, mois [11, 12] en test",
+  "train_rows": 2695006,
+  "test_rows": 507696,
+  "test_occupancy_rate": 0.5677,
+  "features": [
+    "heure_sin",
+    "heure_cos",
+    "jour_semaine",
+    "est_weekend",
+    "duree_max"
+  ],
+  "auc_baseline_hour_day": 0.7045,
+  "auc_random_forest": 0.7211,
+  "auc_gain": 0.0166,
+  "accuracy": 0.6751,
+  "feature_importance": {
+    "heure_sin": 0.3431,
+    "heure_cos": 0.3732,
+    "jour_semaine": 0.059,
+    "est_weekend": 0.0126,
+    "duree_max": 0.2121
+  },
+  "proba_min": 0.0,
+  "proba_max": 0.9774
+}

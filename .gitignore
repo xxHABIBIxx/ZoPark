@@ -1,0 +1,28 @@
+# Builds
+dist/
+build/
+webapp/
+*.exe
+
+# Flutter
+app/.dart_tool/
+app/build/
+app/.flutter-plugins*
+
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/
+.env
+
+# Données lourdes / régénérables
+*.graphml
+*.csv
+*.xls
+*.xlsx
+
+# OS / IDE
+Thumbs.db
+.vscode/
+.idea/
