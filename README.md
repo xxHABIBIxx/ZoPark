@@ -18,7 +18,7 @@ Melbourne, Australia, publishes real sensor data from its streets. I trained a *
 ## Key features
 
 - 🗺️ **Interactive map** of 391 regulated spots (176 pay meters and 215 accessible spots)
-- 📊 **Occupancy prediction** for each spot, based on 5 variables 
+- 📊 **Occupancy prediction** for each spot, based on real time
 - 🚫 **No-parking zones** and restrictions shown on the map
 - 🧭 **Congestion-aware routing**: a custom weighted **A\*** algorithm on the real Halifax road network, shown side by side with the classic shortest path
 
