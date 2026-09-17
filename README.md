@@ -1,134 +1,89 @@
-# ZoPark v9 — Halifax
+# 🅿️ ZoPark — Smart Street Parking for Halifax
 
-Application Flutter Web, modèle d'occupation, itinéraire A\* pondéré.
-Le pipeline Melbourne est inclus, prêt à être entraîné.
+**Find a parking spot downtown and get there through the least congested streets, without a single street sensor.**
 
-## Ce qu'il y a dedans
+🇫🇷 [Version française](README.fr.md)
 
-```
-backend/
-  zopark_api.py                 API FastAPI : OSMnx + A* pondéré + inférence
-  zopark_melbourne_pipeline.py  pipeline de ton ami, INTACT (SHA-256 vérifié)
-  train_melbourne.py            entraîne et exporte le modèle
-  geo.py                        géométrie sans dépendance native
-app/                            application Flutter
-tools/build_from_xls.py         génère halifax_bundle.json depuis les .xls
-data/                           les 3 exports .xls + le bundle déjà généré
-```
-
-## Démarrage rapide — l'app seule
-
-Le bundle est déjà généré dans `data/`, tu n'as rien à recalculer.
-
-```bash
-cd ~/Downloads
-rm -rf zopark_app/lib zopark_app/assets
-cp -r zopark_v9/app/lib    zopark_app/lib
-cp -r zopark_v9/app/assets zopark_app/assets
-cp    zopark_v9/app/pubspec.yaml zopark_app/pubspec.yaml
-
-cd zopark_app && flutter pub get && flutter run -d chrome
-```
-
-## L'A\* pondéré
-
-Il est dans `backend/zopark_api.py`, méthode `ZoParkRouter.route()`. C'est la
-logique d'origine de `zopark_rooter.py` :
-
-```python
-cout = distance * (1 + alpha * occupation)
-```
-
-`alpha = 0` donne le plus court chemin. Au-dessus, les rues que le modèle juge
-saturées sont pénalisées. L'heuristique haversine est admissible, donc A\*
-reste optimal.
-
-L'endpoint `/route` renvoie **les deux tracés** — `classic` (alpha 0) et
-`zopark` (alpha 2,5) — plus un drapeau `routes_identical` quand ils se
-superposent. L'app affiche le gris et le bleu côte à côte.
-
-Trois corrections par rapport à la version d'origine :
-
-- Les extrémités du tracé sont raccordées aux vraies coordonnées.
-  `nearest_nodes` accroche à une intersection, parfois à 100 m de la place.
-- Rayon du graphe porté de 4 à 6 km — l'ouest de la péninsule en sortait.
-- `alpha` ramené de 8 à 2,5 : à 8, le détour faisait 2,2 km pour 1,2 km direct.
-
-```bash
-cd backend
-pip install -r requirements.txt
-uvicorn zopark_api:app --port 8000
-```
-
-Compte 3 à 4 minutes au premier lancement, le temps de télécharger le réseau
-routier. Il est ensuite mis en cache.
-
-## Activer le modèle Melbourne
-
-1. Télécharger « On-street Car Parking Sensor Data - 2019 » sur
-   <https://data.melbourne.vic.gov.au>
-2. Entraîner :
-
-```bash
-cd backend
-python train_melbourne.py /chemin/vers/melbourne_2019.csv
-```
-
-3. Relancer `uvicorn`. Le backend détecte le `.pkl` seul :
-
-```
-[INIT] modele appris charge : zopark_melbourne_rf.pkl     <- Melbourne actif
-[INIT] pas de zopark_melbourne_rf.pkl — grille ...        <- mode paramétrique
-```
-
-Le script affiche l'AUC du Random Forest **et celle de la baseline moyenne
-jour/heure**. Si l'écart est sous 0,02, il te le signale : la moyenne
-historique suffirait, et c'est un résultat honnête à présenter.
-
-## Les deux modes
-
-| | Sans `.pkl` | Avec Melbourne |
-|---|---|---|
-| Nature | paramétrique | **appris sur capteurs réels** |
-| Vérité terrain | aucune | oui, mesurée |
-| Scores distincts (391 places) | **222** | 7 |
-
-Melbourne apporte la légitimité scientifique, le paramétrique la finesse
-spatiale. Ses cinq variables sont temporelles : à Halifax, durée × zone
-tarifaire ne donne que 7 combinaisons, donc des groupes qui basculent ensemble.
-
-Montre les deux et explique pourquoi ils diffèrent. Un jury retient ça mieux
-qu'un chiffre isolé.
-
-## Périmètre — à dire avant qu'on te le demande
-
-L'app couvre **le stationnement réglementé du centre-ville** : 176 bornes de
-paiement et 215 places réservées aux personnes handicapées. C'est l'intégralité
-de ce que HRM publie.
-
-Le stationnement gratuit sur rue n'est recensé dans aucun jeu de données
-municipal — il n'apparaît donc pas.
-
-Les 176 bornes sont des **machines**, réparties sur 73 emplacements. Le point
-marque la borne, pas la place. La capacité de 8 places par borne est une
-estimation, HRM ne publie pas ce chiffre. Et aucune donnée ne précise les
-heures d'application du tarif : à 21 h, une place affichée « payante » est
-probablement gratuite.
 
 ---
 
+## The problem
 
+Downtown Halifax publishes where its parking meters are, but not whether a spot is likely to be free. Cities that answer that question install sensors in the pavement, which is expensive. Halifax has none.
 
+## The solution
 
-## Zoom
+Melbourne, Australia, publishes real sensor data from its streets. I trained a **Random Forest** model on that data to learn how parking occupancy changes with time and day, then **transferred it to Halifax's open municipal data**. The result is an occupancy estimate for every regulated spot downtown, with no hardware at all.
 
-La molette zoome désormais — il manquait `scrollWheelVelocity`, sans lequel
-flutter_map ignore la molette sur le web. Deux boutons + et − ont été ajoutés
-en haut à droite, plus fiables sur pavé tactile.
+## Key features
 
-## Régénérer la couche d'interdiction
+- 🗺️ **Interactive map** of 391 regulated spots (176 pay meters and 215 accessible spots)
+- 📊 **Occupancy prediction** for each spot, based on 5 variables 
+- 🚫 **No-parking zones** and restrictions shown on the map
+- 🧭 **Congestion-aware routing**: a custom weighted **A\*** algorithm on the real Halifax road network, shown side by side with the classic shortest path
 
-```bash
-python tools/add_restrictions.py --src data --bundle data/halifax_bundle.json
-cp data/halifax_bundle.json app/assets/data/
+## Architecture
+
+```mermaid
+flowchart LR
+    A[Melbourne sensor data] --> B[Random Forest training]
+    B --> C[Trained model]
+    D[Halifax open data] --> F[FastAPI backend]
+    C --> F
+    G[OpenStreetMap road network] --> F
+    F -->|spots + routes| H[Flutter Web app]
 ```
+
+## Results
+
+| Model | AUC |
+|---|---|
+| Baseline (historical average) | 0.705 |
+| **Random Forest** | **0.721** |
+
+Trained on 2M real sensor events, tested on unseen months. Time of day drives most of the signal, so the next gain will come from **spatial features**.
+
+## What I built
+
+- **REST API** in FastAPI serving parking data, predictions and routes
+- **Weighted A\* routing** on an OSMnx / NetworkX graph, with a cost of `distance × (1 + α × occupancy)`
+- **Model training script** and a comparison against a simple baseline
+- **Data pipeline** turning Halifax open datasets into a single JSON bundle
+- **Flutter Web interface** with an interactive map
+- **Standalone Windows executable** packaged with PyInstaller
+
+## Tech stack
+
+**Backend:** Python · FastAPI · Uvicorn  
+**Machine learning:** scikit-learn · pandas  
+**Routing:** OSMnx · NetworkX  
+**Frontend:** Flutter Web · flutter_map · OpenStreetMap  
+**Packaging:** PyInstaller · PowerShell
+
+## Known limitations
+
+- Only **regulated** parking is covered: Halifax publishes no data on free street parking.
+- Predictions are validated on Melbourne data; no local Halifax data exists yet to validate them.
+
+## Next steps
+
+- Add spatial features (nearby shops, offices, hospitals) to better separate spots
+- Validate predictions with real observations in Halifax
+- do it in other cities like Montreal Toronto New-York...
+---
+
+## Source code
+
+The full source code is kept in a **private repository** while the project is still in development. **Access is available on request**: contact me on [LinkedIn](https://www.linkedin.com/in/yassine-elanaoui-77384129a/).
+
+## Credits
+
+-Developed as a supervised internship project at **Université de Moncton**, under the supervision of **Prof. Zoubeir Mlika**.  
+-Lin et al., « A survey of smart parking solutions », IEEE Transactions on Intelligent Transportation Systems, 2017
+
+**Data:** City of Melbourne Open Data · Halifax Regional Municipality Open Data · © OpenStreetMap contributors
+
+## Author
+
+**Yassine Elanaoui** · Applied Computer Science student, Université de Moncton (class of 2027)  
+[LinkedIn]([https://linkedin.com/in/YOUR_PROFILE](https://www.linkedin.com/in/yassine-elanaoui-77384129a/)) · [Email](yelanaoui@gmail.com)
